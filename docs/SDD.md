@@ -249,7 +249,7 @@ LLM-as-Router（入口层，做分诊）
 | 后端 | Python + FastAPI | AI生态最强，Pydantic数据校验天然适合医疗数据完整性，自带OpenAPI文档 |
 | 数据库 | PostgreSQL | JSONB支持半结构化数据，pg_audit审计能力，MVP到生产无缝过渡 |
 | 前端 | React + Next.js | 生态最大，组件库丰富（Shadcn/ui），面试官认知度最高 |
-| AI集成 | Claude/OpenAI API 直接调用 | 不用LangChain（过度抽象），Pydantic + Tool Use强制结构化输出 |
+| AI集成 | OpenAI 兼容接口（DeepSeek/OpenAI/Claude 均可） | 通过 openai SDK 调用，`AI_API_BASE_URL` 配置切换供应商，不用LangChain |
 | 规则引擎 | 自建Python规则引擎 + 决策表 | Python生态规则引擎框架偏弱，自建可完全掌控审计和版本化 |
 | 可观测性 | structlog + OpenTelemetry埋点 | 代码中体现意识，MVP不需要部署Grafana全套 |
 | 项目结构 | Monorepo + 模块化单体 | 展示分层能力（六边形架构），不引入微服务复杂度 |
@@ -294,7 +294,7 @@ Prompt模板结构：
 metadata:
   version: "1.2.0"
   reviewed_by: "dr-wang"          # 医学审核人
-  model_target: "claude-sonnet-4-20250514"
+  model_target: "deepseek-chat"    # 可通过 AI_MODEL 环境变量配置
 
 system_prompt: |
   ## 硬性约束
@@ -307,7 +307,7 @@ output_schema:
   # Pydantic模型定义的JSON Schema
 ```
 
-**结构化输出：Pydantic模型 + Anthropic Tool Use + 应用层校验**
+**结构化输出：Pydantic模型 + JSON Schema约束 + 应用层校验**
 
 三层防护：幻觉防护（强制"信息不足"输出）、输出格式强制（schema校验失败则重试）、安全边界（免责声明+角色边界声明）。
 
@@ -405,14 +405,14 @@ output_schema:
 │  ┌──────────────┐ ┌──────────────┐ ┌────────────────────────┐  │
 │  │ PostgreSQL   │ │ LLM Adapter  │ │ Audit Adapter          │  │
 │  │ Adapter      │ │              │ │                        │  │
-│  │ - SQLAlchemy │ │ - Claude API │ │ - append-only表        │  │
+│  │ - SQLAlchemy │ │ - OpenAI SDK │ │ - append-only表        │  │
 │  │ - Alembic    │ │ - 超时/重试  │ │ - REVOKE UPDATE/DELETE │  │
 │  │ - 仓储实现   │ │ - 降级策略   │ │ - 应用层写入           │  │
 │  └──────┬───────┘ └──────┬───────┘ └────────────┬───────────┘  │
 │         │                │                       │               │
 │  ┌──────┴───────┐ ┌──────┴───────┐ ┌───────────┴────────────┐  │
-│  │ PostgreSQL   │ │ Claude/OpenAI│ │ PostgreSQL audit_log   │  │
-│  │ (主数据库)   │ │ API (外部)   │ │ (审计专用)             │  │
+│  │ PostgreSQL   │ │ DeepSeek/    │ │ PostgreSQL audit_log   │  │
+│  │ (主数据库)   │ │ OpenAI兼容   │ │ (审计专用)             │  │
 │  └──────────────┘ └──────────────┘ └───────────────────────┘  │
 │                                                                  │
 │  可观测性: [structlog] [OpenTelemetry] [HealthCheck]             │
@@ -659,10 +659,11 @@ async def submit(self, req: AssessmentRequest) -> Result[AssessmentResponse, str
 - JSONB字段存储半结构化数据（症状详情、规则命中记录）
 - 审计表REVOKE UPDATE/DELETE，数据库层面保证不可篡改
 
-#### AI集成：直接调用API + Pydantic结构化输出
+#### AI集成：OpenAI兼容接口 + Pydantic结构化输出
 
-- 使用anthropic SDK直接调用Claude API（不用LangChain）
-- Tool Use强制结构化输出，Pydantic模型做应用层校验
+- 使用openai SDK调用AI API（支持DeepSeek/OpenAI/Claude等任意兼容服务）
+- 通过 `AI_API_BASE_URL` + `AI_API_KEY` + `AI_MODEL` 环境变量配置
+- JSON Schema约束输出格式，Pydantic模型做应用层校验
 - 超时10s + 降级策略：AI不可用时返回纯规则引擎结果
 - Prompt版本化：Git管理 + 数据库注册表运行时切换
 
@@ -749,7 +750,7 @@ async def submit(self, req: AssessmentRequest) -> Result[AssessmentResponse, str
     "rule_versions": {"RULE-GI-001": "1.0.0"},
     "engine_version": "0.1.0",
     "generated_at": "2025-01-15T10:30:00.123Z",
-    "ai_model_version": "claude-sonnet-4-20250514",
+    "ai_model_version": "deepseek-chat",
     "ai_prompt_version": "1.2.0"
   },
   "created_at": "2025-01-15T10:30:00.123Z",
@@ -1245,7 +1246,7 @@ Patient    Frontend    FastAPI    AssessmentSvc    LLM(Extract)    RuleEngine   
   │           │──POST────▶│            │               │               │              │           │
   │           │           │──validate─▶│               │               │              │           │
   │           │           │            │──extract()───▶│               │              │           │
-  │           │           │            │               │──Claude API──▶│              │           │
+  │           │           │            │               │──AI API────▶│              │           │
   │           │           │            │◀──symptoms────│  (~1-2s)      │              │           │
   │           │           │            │──grade()─────────────────────▶│              │           │
   │           │           │            │◀──GradingResult───────────────│  (~5ms)      │           │
@@ -1373,7 +1374,7 @@ PerceptionInput (表单 + 自由文本)
        │     ↓ 置信度<0.8 或无结果
        ├─ L2: RuleNLPExtractor ── jieba分词+模式匹配 (<50ms, 置信度0.8-0.95)
        │     ↓ 置信度<0.85 或文本>50字
-       └─ L3: LLMExtractor ────── Claude API + Tool Use (<3s, 置信度0.85-0.98)
+       └─ L3: LLMExtractor ────── OpenAI兼容API (DeepSeek) (<3s, 置信度0.85-0.98)
              ↓ 超时10s → 降级
   │
   ▼
@@ -1396,7 +1397,7 @@ PerceptionOutput → 决策层
 |------|------|------|--------|---------|
 | L1 | 症状词典+正则匹配 | <10ms | 0.7-0.9 | 始终执行 |
 | L2 | jieba分词+医学词典+模式匹配 | <50ms | 0.8-0.95 | L1置信度<0.8或无结果 |
-| L3 | Claude API + Tool Use | <3s | 0.85-0.98 | L2置信度<0.85或文本>50字 |
+| L3 | OpenAI兼容API (DeepSeek) | <3s | 0.85-0.98 | L2置信度<0.85或文本>50字 |
 
 紧急关键词快速通道：发热/出血/呼吸困难/过敏等直接触发高风险标记，不等待级联完成。
 
@@ -1591,7 +1592,7 @@ Golden Test Set：初始>=50个标注case，覆盖所有CTCAE分类，至少2名
 
 | 阶段 | 技术 | 数据量要求 | 关键里程碑 |
 |------|------|-----------|-----------|
-| 阶段1 [MVP] | 规则引擎 + Claude API | 无 | 系统上线，开始积累数据 |
+| 阶段1 [MVP] | 规则引擎 + AI API (DeepSeek) | 无 | 系统上线，开始积累数据 |
 | 阶段2 [6-12月] | + BERT微调症状分类 | >=5,000条评估 | F1>=0.90，可替代LLM做提取 |
 | 阶段3 [12-24月] | + 个体化风险预测(XGBoost) | >=20,000条评估 | AUC>=0.85 |
 | 阶段4 [24月+] | + 联邦学习多院协作 | 多院数据 | 不共享原始数据的协作训练 |
@@ -1824,39 +1825,72 @@ make up                        # 一键启动
 
 ---
 
-## 7. 实现偏差说明（Round 7 补充）
+## 7. 实现补充说明（Round 7）
 
-> 以下记录设计阶段（Round 2-6）与最终实现（Round 7）之间的差异。设计文档保留原始选型讨论作为决策记录。
+> 以下记录实现阶段新增的设计决策和技术细节。
 
-### 7.1 AI 接口变更
+### 7.1 AI 增强架构
 
-| 设计阶段 | 最终实现 | 原因 |
-|---------|---------|------|
-| Anthropic Claude API + Tool Use | OpenAI 兼容接口（DeepSeek） | 通过 OpenAI SDK 兼容层调用，支持任意 OpenAI 兼容服务 |
-| anthropic SDK 直接调用 | openai SDK + `AI_API_BASE_URL` 配置 | 更灵活的多供应商支持 |
-| Claude Haiku 做症状提取 | `AI_MODEL` 环境变量可配置 | 默认 deepseek-chat，可切换任意模型 |
+系统采用 OpenAI 兼容接口，通过 `AI_API_BASE_URL` + `AI_API_KEY` + `AI_MODEL` 环境变量配置，支持 DeepSeek/OpenAI/Claude 等任意兼容服务。AI 增强分为两步：
 
-### 7.2 AI 增强输出结构变更
+**Step 1: 症状提取** — 从自由文本中智能识别症状和严重程度，输出结构化 JSON 数组。失败时自动降级到关键词匹配（37个中文→英文映射）。
 
-设计阶段的 AI 输出为简单的两段文本。最终实现改为结构化报告：主诉概要 + 需要重视的症状（原因/警示信号/建议）+ 无需过虑的症状 + 综合建议。前端按标记渲染为分色卡片。
+**Step 2: 结构化解读** — 基于规则引擎评估结果 + 患者用药/病史信息，生成结构化报告：
+- 主诉概要（chief_complaint_summary）
+- 需要重视的症状（high_attention_symptoms）：每个含原因、警示信号、建议
+- 无需过虑的症状（low_concern_symptoms）：含安心说明
+- 综合个性化建议（personalized_advice）
 
-### 7.3 风险评分算法变更
+前端按 `【主诉概要】【需要重视】【无需过虑】` 标记渲染为分色卡片（红/绿）。
 
-| 设计阶段 | 最终实现 |
-|---------|---------|
-| 固定映射 low=0, medium=0.5, high=1.0 | 加权计算：`score = risk_order×0.5 + grade×0.15 + severity×0.02`，`final = max×0.6 + avg×0.4` |
+### 7.2 风险评分算法
 
-### 7.4 新增功能（设计文档未覆盖）
+采用加权计算替代固定映射：
 
-- **用药与手术信息**：新增 `medication_info` 和 `medical_history` 字段，传给 AI 增强分析
-- **i18n 国际化**：React Context + JSON 翻译文件，中英文切换
-- **三级严重程度按钮**：替代 1-10 滑块，每个症状 3 个描述性按钮（轻/中/重，映射 severity 2/5/8）
-- **评估依据中文化**：evidence_text 从英文改为中文
-- **患者反馈 API**：`POST /assessments/{id}/feedback`，幂等，闭环学习入口
+```
+每个症状: score = risk_order × 0.5 + grade × 0.15 + severity × 0.02
+综合评分: final = max_score × 0.6 + avg_score × 0.4
+归一化:   risk_score = min(1.0, final / 1.5)
+```
 
-### 7.5 数据库兼容
+前端显示为 0-100 的整数分值。
 
-| 设计阶段 | 最终实现 |
-|---------|---------|
-| 仅 PostgreSQL | SQLite（开发）+ PostgreSQL（生产）双模式 |
-| UUID / JSONB / BigInteger | SQLite 用 String(36) / JSON / Integer 适配 |
+### 7.3 输入增强
+
+`AssessmentRequest` 新增两个可选字段：
+- `medication_info`: 用药与手术信息（药物名称、用量、频率、近期手术）
+- `medical_history`: 既往病史（过敏史、慢性病、家族史）
+
+这两个字段传给 AI 增强的 prompt，使个性化解读能结合患者的治疗背景。
+
+### 7.4 症状严重程度交互
+
+替代原设计的 1-10 滑块，改为三级描述按钮：
+- 轻度（severity=2）：30-40字的通俗描述
+- 中度（severity=5）：30-40字的通俗描述
+- 重度（severity=8）：30-40字的通俗描述
+
+每个症状的三级描述均有中英文版本，存储在 `i18n/zh.json` 和 `i18n/en.json` 的 `severityLevels` 字段中。
+
+### 7.5 国际化（i18n）
+
+采用 React Context + JSON 翻译文件方案，无第三方依赖：
+- `I18nProvider` 包裹全局，提供 `t()` / `symptomName()` / `severityLevels()` 方法
+- 语言偏好存储在 `localStorage`，导航栏提供切换按钮
+- 覆盖范围：所有 UI 文案、风险标签、症状名、日期格式
+- 后端动态内容（AI生成文本、规则建议）保持中文，属于运行时生成
+
+### 7.6 数据库双模式
+
+通过 `DATABASE_URL` 环境变量自动切换：
+- 未设置 → SQLite（`gentlemend_dev.db`），零配置本地开发
+- 设置 `postgresql+asyncpg://...` → PostgreSQL 生产模式
+
+类型适配：UUID → String(36)，JSONB → JSON，BigInteger → Integer（SQLite模式）。
+
+### 7.7 评估依据中文化
+
+`evidence_text` 从��文改为中文显示：
+- 症状名：通过 `_SYMPTOM_CN` 映射表翻译
+- 严重程度：从数字改为描述（轻度/中度/重度）
+- 风险等级：low/medium/high → 低风险/中风险/高风险
