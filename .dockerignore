@@ -1,0 +1,14 @@
+**/.git
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/node_modules
+**/.next
+**/.env
+**/.env.local
+**/coverage
+**/*.pyc
+**/dist
+**/.DS_Store
+**/Thumbs.db

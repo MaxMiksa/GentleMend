@@ -1,0 +1,181 @@
+{
+  "app": {
+    "title": "GentleMend — Breast Cancer Side Effect Assessment",
+    "description": "Rule-engine based breast cancer treatment side effect risk assessment system",
+    "footer": "GentleMend — For reference only, not a medical diagnosis. Seek immediate medical attention in emergencies.",
+    "disclaimer": "Assessment results are for reference only and cannot replace professional medical diagnosis"
+  },
+  "nav": {
+    "brand": "GentleMend",
+    "assess": "Assessment",
+    "history": "History"
+  },
+  "input": {
+    "title": "Side Effect Self-Assessment",
+    "subtitle": "Describe your current symptoms and discomfort. The system will assess your risk level and provide recommendations.",
+    "medicationLabel": "Medications & Surgery",
+    "medicationPlaceholder": "List current medications (name, dosage, frequency) and any recent surgical procedures...",
+    "medicationHint": "e.g., Docetaxel 75mg/m² every 3 weeks, lumpectomy last month",
+    "historyLabel": "Medical History",
+    "historyPlaceholder": "Relevant medical history: allergies, chronic conditions, family history...",
+    "historyHint": "e.g., Hypertension for 5 years, penicillin allergy, mother had breast cancer",
+    "textLabel": "Symptom Description",
+    "textPlaceholder": "e.g., I've been feeling nauseous for the past three days, can't eat, feeling weak, slight fever...",
+    "textHint": "Describe in your own words — the system will automatically identify symptom keywords",
+    "symptomsTitle": "Common Symptoms (optional, click to add)",
+    "severityTitle": "Select severity for each symptom",
+    "submit": "Start Assessment",
+    "submitting": "Assessing..."
+  },
+  "result": {
+    "title": "Assessment Result",
+    "riskScore": "Risk Score",
+    "contactTitle": "Contact Your Medical Team Immediately",
+    "contactDesc": "Your symptoms are assessed as high risk. Please contact your medical team as soon as possible for professional guidance.",
+    "contactBtn": "Contact Medical Team",
+    "contactSent": "Request Sent",
+    "contactMedium": "If symptoms persist or worsen, consider contacting your medical team",
+    "contactMediumBtn": "Contact Team",
+    "contactMediumSent": "Sent",
+    "advicesTitle": "Recommendations",
+    "evidencesTitle": "Assessment Evidence",
+    "ctcaeTitle": "CTCAE Grading",
+    "sourceRule": "Rule Engine",
+    "sourceAI": "AI Personalized",
+    "priority": "Priority",
+    "confidence": "Confidence",
+    "assessTime": "Assessment Time",
+    "ruleEngine": "Rule Engine",
+    "aiExtract": "AI Extraction",
+    "aiEnhance": "AI Enhancement",
+    "yes": "Yes",
+    "no": "No",
+    "newAssess": "New Assessment",
+    "viewHistory": "View History",
+    "loading": "Loading assessment result...",
+    "notFound": "Assessment result not found",
+    "backHome": "Back to Home"
+  },
+  "history": {
+    "title": "Assessment History",
+    "total": "{count} assessment records",
+    "filterAll": "All",
+    "filterHigh": "High Risk",
+    "filterMedium": "Medium Risk",
+    "filterLow": "Low Risk",
+    "empty": "No assessment records yet",
+    "startFirst": "Start your first assessment",
+    "loading": "Loading...",
+    "prevPage": "Previous",
+    "nextPage": "Next",
+    "symptoms": "{count} symptoms"
+  },
+  "feedback": {
+    "question": "Was this assessment result helpful?",
+    "helpful": "Helpful",
+    "notHelpful": "Not Helpful",
+    "thanks": "Thank you for your feedback. This helps us continuously improve assessment accuracy."
+  },
+  "risk": {
+    "low": "Low Risk",
+    "medium": "Medium Risk",
+    "high": "High Risk",
+    "msgLow": "Your symptoms are mild. Please continue to monitor and record any changes.",
+    "msgMedium": "Please closely monitor your symptoms. Contact your medical team if necessary.",
+    "msgHigh": "Please contact your medical team or visit the hospital as soon as possible."
+  },
+  "symptoms": {
+    "nausea": "Nausea",
+    "vomiting": "Vomiting",
+    "diarrhea": "Diarrhea",
+    "anorexia": "Loss of Appetite",
+    "mucositis": "Oral Mucositis",
+    "fever": "Fever",
+    "hemorrhage": "Hemorrhage",
+    "rash": "Rash",
+    "alopecia": "Hair Loss",
+    "neuropathy": "Peripheral Neuropathy",
+    "hand_foot_syndrome": "Hand-Foot Syndrome",
+    "fatigue": "Fatigue",
+    "arthralgia": "Joint Pain",
+    "hot_flash": "Hot Flash",
+    "cardiotoxicity": "Cardiotoxicity",
+    "dyspnea": "Dyspnea"
+  },
+  "severityLevels": {
+    "nausea": [
+      "Occasional mild nausea that passes quickly, barely affects eating or daily routine",
+      "Frequent nausea throughout the day, noticeably eating less, sometimes need to rest to feel better",
+      "Persistent severe nausea that makes eating nearly impossible, significantly impacts daily life and recovery"
+    ],
+    "vomiting": [
+      "Occasional vomiting, no more than 1-2 times per day, resolves on its own without affecting meals",
+      "Vomiting several times daily, difficulty keeping food down, need to focus on staying hydrated",
+      "Severe non-stop vomiting, unable to eat or drink anything, feeling very weak with possible dehydration"
+    ],
+    "diarrhea": [
+      "Bowel movements slightly more frequent than usual, 1-3 extra times per day, soft but manageable",
+      "Frequent diarrhea, 4+ times daily, need to stay near a bathroom, limiting normal activities",
+      "Severe watery diarrhea many times a day, with cramping or signs of dehydration, noticeable weakness"
+    ],
+    "anorexia": [
+      "Appetite slightly reduced compared to normal, still able to eat regular meals, no weight change",
+      "Appetite significantly decreased, eating less than half of normal portions, starting to lose weight",
+      "Complete loss of appetite, food feels repulsive, noticeable weight loss over a short period"
+    ],
+    "mucositis": [
+      "Mild discomfort in the mouth, possibly some redness or swelling, doesn't affect eating or speaking",
+      "Visible mouth sores causing pain when eating, need to switch to soft or liquid foods to manage",
+      "Severe mouth ulceration with intense pain, unable to eat normally, difficulty speaking and swallowing"
+    ],
+    "fever": [
+      "Slightly elevated temperature (37.5-38°C), feeling generally okay, no chills or significant discomfort",
+      "Moderate fever (38-38.5°C), feeling unwell, may have mild chills or headache along with the fever",
+      "Persistent high fever (>38.5°C) that won't come down, with noticeable chills, sweating, and feeling very unwell"
+    ],
+    "hemorrhage": [
+      "Occasional small bleeding spots or mild bruises on skin, slight gum bleeding when brushing teeth",
+      "Bleeding that's hard to stop, bruises appearing more often and larger, frequent nosebleeds or gum bleeding",
+      "Significant bleeding that's difficult to control, possible signs of internal bleeding like blood in urine or dark stools"
+    ],
+    "rash": [
+      "Small localized rash or red spots on a limited area, no itching or pain, doesn't affect daily comfort",
+      "Rash spreading to multiple body areas with noticeable itching, affecting sleep and daily comfort level",
+      "Widespread rash covering large areas, severe itching or pain, possibly with blisters or peeling skin"
+    ],
+    "alopecia": [
+      "Slightly more hair falling out when washing or brushing, not very noticeable in appearance",
+      "Very noticeable hair loss with significantly thinner hair, may want to consider wigs or head coverings"
+    ],
+    "neuropathy": [
+      "Occasional mild numbness or tingling in fingertips or toes, brief episodes that don't affect activities",
+      "Frequent numbness or tingling in hands and feet, affecting fine motor tasks like buttoning clothes or using chopsticks",
+      "Severe numbness with significant loss of sensation, affecting walking and ability to perform daily self-care"
+    ],
+    "fatigue": [
+      "Getting tired more easily than usual, but able to recover energy after adequate rest and sleep",
+      "Noticeable fatigue and weakness, everyday activities like housework or walking feel significantly harder",
+      "Extreme exhaustion, need to stay in bed most of the time, barely able to perform any daily activities"
+    ],
+    "arthralgia": [
+      "Mild joint aching or soreness, occasional discomfort during movement but doesn't limit normal activities",
+      "Noticeable joint pain that limits range of motion, worse when climbing stairs or bending, need pain management",
+      "Severe joint pain even at rest, significantly impairs movement and disrupts sleep, daily activities very difficult"
+    ],
+    "hot_flash": [
+      "Occasional hot flashes with mild sweating, lasting a few minutes then resolving, minimal daily impact",
+      "Frequent hot flash episodes multiple times daily, noticeable sweating, interfering with work and social activities",
+      "Severe hot flashes with heavy sweating, night sweats seriously disrupting sleep, frequent episodes throughout the day"
+    ],
+    "cardiotoxicity": [
+      "Occasional brief palpitations or mild chest tightness that resolves quickly with rest, not concerning",
+      "Frequent heart palpitations and chest tightness, symptoms noticeably worse with physical activity, need frequent rest",
+      "Persistent cardiac discomfort with shortness of breath or chest pain, even minimal activity causes heart racing and breathlessness"
+    ],
+    "dyspnea": [
+      "Mild shortness of breath only after vigorous activity like climbing stairs or brisk walking, resolves quickly with rest",
+      "Getting short of breath during normal daily activities like walking or light housework, need to stop and rest frequently",
+      "Difficulty breathing even while sitting still or lying down, any speaking or minimal movement worsens breathlessness"
+    ]
+  }
+}

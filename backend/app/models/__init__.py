@@ -1,0 +1,41 @@
+"""浅愈(GentleMend) ORM 模型 — 统一导出"""
+
+from app.models.models import (
+    ActorType,
+    Advice,
+    AdviceSourceType,
+    Assessment,
+    AssessmentStatus,
+    AuditLog,
+    ContactRequest,
+    ContactStatus,
+    EventLog,
+    EventType,
+    Evidence,
+    Gender,
+    Patient,
+    PromptRegistry,
+    RiskLevel,
+    RuleSource,
+    RuleStatus,
+)
+
+__all__ = [
+    "ActorType",
+    "Advice",
+    "AdviceSourceType",
+    "Assessment",
+    "AssessmentStatus",
+    "AuditLog",
+    "ContactRequest",
+    "ContactStatus",
+    "EventLog",
+    "EventType",
+    "Evidence",
+    "Gender",
+    "Patient",
+    "PromptRegistry",
+    "RiskLevel",
+    "RuleSource",
+    "RuleStatus",
+]

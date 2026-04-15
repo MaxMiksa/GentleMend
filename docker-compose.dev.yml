@@ -1,0 +1,50 @@
+# ============================================================
+# 浅愈(GentleMend) — 开发环境覆盖配置
+# 用法: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# 或直接: make dev (Makefile 已配置)
+#
+# 开发环境特性:
+#   - 源码挂载 + 热重载
+#   - 暴露调试端口
+#   - 详细日志
+#   - 无资源限制
+# ============================================================
+
+services:
+  backend:
+    build:
+      target: runtime  # 跳过生产优化
+    environment:
+      APP_ENV: development
+      LOG_LEVEL: DEBUG
+      DB_ECHO: "true"  # SQL 日志输出
+    volumes:
+      - ./backend:/app  # 源码挂载
+    command: >
+      python -m uvicorn app.main:app
+      --host 0.0.0.0 --port 8000
+      --reload --reload-dir /app/app
+      --log-level debug
+    # 开发环境不限制资源
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+
+  frontend:
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules  # 排除 node_modules
+      - /app/.next         # 排除 .next 构建缓存
+    command: npm run dev
+
+  postgres:
+    ports:
+      - "5432:5432"  # 开发环境暴露端口，方便本地工具连接
+
+  redis:
+    ports:
+      - "6379:6379"  # 开发环境暴露端口

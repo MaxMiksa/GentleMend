@@ -1,0 +1,160 @@
+version: "3.9"
+
+# ============================================================
+# 浅愈(GentleMend) — Docker Compose 完整编排
+# 一键启动: docker compose up -d
+# ============================================================
+
+services:
+  # ============================================================
+  # PostgreSQL — 主数据库
+  # ============================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: gentlemend-postgres
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-gentlemend}
+      POSTGRES_USER: ${POSTGRES_USER:-gentlemend}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gentlemend_dev_2025}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/infrastructure/db/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./backend/infrastructure/db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gentlemend} -d ${POSTGRES_DB:-gentlemend}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - gentlemend-net
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+
+  # ============================================================
+  # Redis — 规则缓存 + 会话缓存
+  # ============================================================
+  redis:
+    image: redis:7-alpine
+    container_name: gentlemend-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command: >
+      redis-server
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --save 60 100
+      --appendonly yes
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - gentlemend-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+
+  # ============================================================
+  # Backend — FastAPI (Python 3.11)
+  # ============================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gentlemend-backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      # 数据库 (容器内通过服务名访问)
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-gentlemend}
+      DB_USER: gentlemend_app
+      DB_PASSWORD: gentlemend_app_2025
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # AI (可选)
+      AI_API_BASE_URL: ${AI_API_BASE_URL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      # 应用
+      APP_ENV: ${APP_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    volumes:
+      # 开发模式: 挂载源码实现热重载
+      - ./backend:/app
+    networks:
+      - gentlemend-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+
+  # ============================================================
+  # Frontend — Next.js (React)
+  # ============================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gentlemend-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      NODE_ENV: ${NODE_ENV:-development}
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - gentlemend-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
+
+networks:
+  gentlemend-net:
+    driver: bridge

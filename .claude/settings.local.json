@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \":*)",
+      "Bash(pip install:*)",
+      "Bash(find app:*)",
+      "Bash(cp .env.example .env)",
+      "Bash(docker compose:*)",
+      "Bash(where docker:*)",
+      "Bash(where docker.exe)",
+      "Bash(cd:*)",
+      "Bash(pkill -f \"uvicorn app.main\")",
+      "Bash(taskkill //F //IM python.exe)"
+    ]
+  },
+  "spinnerTipsEnabled": false
+}
