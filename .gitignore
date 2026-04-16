@@ -41,6 +41,9 @@ htmlcov/
 screenshots/
 .playwright-mcp/
 
+# GitHub workflows (keep local, don't track)
+.github/
+
 # Internal Documentation (per release-ai rules)
 README_OLD.md
 AGENTS.md
