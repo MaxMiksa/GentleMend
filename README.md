@@ -2,7 +2,170 @@
 
 乳腺癌副作用智能评估系统 — 规则引擎 + AI 增强的医疗决策辅助工具。
 
-GitHub: https://github.com/MaxMiksa/GentleMend.git
+
+## 系统架构与数据流图
+
+该部分是为了系统梳理本项目的核心架构图、数据流图以及智能体闭环流程图。
+
+### 1. 架构图 (Architecture Diagram)
+
+该图展示了系统的整体分层架构，特别是“规则引擎（保底）+ AI 增强（提升）”的双轨设计。
+
+```mermaid
+graph TD
+    subgraph Frontend ["前端客户端 (Next.js)"]
+        UI["用户界面 UI"]
+        API_Client["API 客户端"]
+        Tracker["埋点追踪 SDK"]
+    end
+
+    subgraph Backend ["后端服务 (FastAPI)"]
+        API_Layer["API 路由层"]
+        
+        subgraph AgentEngine ["Agent 核心引擎"]
+            Perception["感知层 Perception\n三级级联提取"]
+            Decision["决策层 Decision\n规则匹配+加权评分"]
+            Execution["执行层 Execution\n双版本建议生成"]
+        end
+        
+        subgraph RuleBase ["确定性基线"]
+            RuleEngine["规则引擎"]
+            SeedData["规则种子数据 / CTCAE"]
+        end
+        
+        subgraph AIEnhancement ["AI 增强层"]
+            LLMExtractor["LLM 症状提取"]
+            LLMAdvisor["LLM 建议润色"]
+        end
+        
+        subgraph Observability ["可观测性与审计"]
+            AuditTrail["审计追踪构建器"]
+            EventLogger["事件埋点记录器"]
+        end
+    end
+
+    subgraph Database ["数据持久层"]
+        DB[("PostgreSQL / SQLite")]
+    end
+
+    UI -->|"用户输入"| API_Client
+    API_Client -->|"HTTP 请求"| API_Layer
+    Tracker -->|"上报行为事件"| API_Layer
+    
+    API_Layer --> AgentEngine
+    Perception --> Decision
+    Decision --> Execution
+    
+    Perception -.->|"L3 复杂文本触发"| LLMExtractor
+    Execution -.->|"自然语言润色触发"| LLMAdvisor
+    Decision <-->|"获取匹配规则"| RuleEngine
+    RuleEngine --> SeedData
+    
+    AgentEngine --> AuditTrail
+    API_Layer --> EventLogger
+    
+    AuditTrail --> DB
+    EventLogger --> DB
+    Execution -->|"持久化不可变记录"| DB
+```
+
+---
+
+### 2. 数据流图 (Data Flow Diagram)
+
+该图详细描述了一次患者评估请求从输入到输出的完整管线数据流向。
+
+```mermaid
+graph TD
+    Input["患者输入: 自由文本 / 结构化表单"]
+    
+    subgraph Perception_Pipeline ["感知流: 提取与标准化"]
+        FormProc["表单处理器"]
+        CascadeExtract{"级联提取调度器"}
+        L1["L1: 关键词精准匹配"]
+        L2["L2: 规则 NLP 提取"]
+        L3["L3: LLM 语义大模型提取"]
+        Fuser["症状融合器 SymptomFuser"]
+    end
+    
+    subgraph Decision_Pipeline ["决策流: 评估与推理"]
+        RuleEval["规则评估 Rule Evaluation"]
+        CTCAE["CTCAE 症状分级"]
+        RiskScore["综合风险评分 Risk Scoring"]
+        ConflictRes["冲突解决与降级处理"]
+        Confidence["置信度计算"]
+    end
+    
+    subgraph Execution_Pipeline ["执行流: 结果生成"]
+        RuleAdvice["基础规则建议生成"]
+        SortAdvice["紧急度与优先级排序"]
+        AIEnhance["AI 建议增强 / 医生摘要生成"]
+    end
+    
+    Output["评估报告 Assessment Report"]
+
+    Input --> FormProc
+    Input --> CascadeExtract
+    CascadeExtract --> L1
+    CascadeExtract -->|"L1 置信度低 / 文本较长"| L2
+    CascadeExtract -->|"L2 置信度低 / 文本复杂"| L3
+    
+    FormProc --> Fuser
+    L1 --> Fuser
+    L2 --> Fuser
+    L3 --> Fuser
+    
+    Fuser -->|"结构化症状列表"| RuleEval
+    RuleEval -->|"匹配到的规则列表"| CTCAE
+    CTCAE --> RiskScore
+    RiskScore --> ConflictRes
+    ConflictRes --> Confidence
+    
+    Confidence -->|"包含审计数据的 DecisionResult"| RuleAdvice
+    RuleAdvice --> SortAdvice
+    SortAdvice --> AIEnhance
+    AIEnhance --> Output
+```
+
+---
+
+### 3. 智能体闭环流程图 (Agent Closed-loop Flowchart)
+
+该图展示了系统如何实现“感知 - 决策 - 执行 - 学习”的智能体完整闭环。
+
+```mermaid
+graph TD
+    subgraph Perception ["1. 感知层 (Perception)"]
+        Receive["接收用户非结构化描述"]
+        Understand["理解上下文: 病史/用药/症状"]
+        Standardize["转化为标准化医疗术语 CTCAE"]
+    end
+    
+    subgraph Decision ["2. 决策层 (Decision)"]
+        Infer["多维度推理: 匹配医疗安全规则"]
+        Stratify["风险分层: 判定 高/中/低 风险"]
+        Guard["安全守护: 冲突检测与最高风险优先"]
+    end
+    
+    subgraph Execution ["3. 执行层 (Execution)"]
+        Generate["生成行动建议: 居家观察/联系团队/就医"]
+        Empathize["同理心表达: AI 温和润色避免恐慌"]
+        Output["交付可解释的、带有审计链的评估结果"]
+    end
+    
+    subgraph Learning ["4. 学习层 (Learning)"]
+        Feedback["收集患者显式反馈"]
+        Observe["收集隐式埋点: 停留时间/点击求助行为"]
+        Audit["记录完整决策依据链与 LLM 原始输出"]
+        Evolve["系统迭代: 优化规则阈值与 Prompt 提示词"]
+    end
+
+    Perception -->|"输出结构化症状向量"| Decision
+    Decision -->|"输出风险级别与依据证据"| Execution
+    Execution -->|"呈现给用户与医疗团队"| Learning
+    Learning -.->|"数据反哺: 识别漏报症状"| Perception
+    Learning -.->|"规则热更新: 调整风险权重"| Decision
+```
 
 ## 快速开始
 
@@ -47,210 +210,7 @@ AI_MODEL=deepseek-chat
 make setup && make dev
 ```
 
-## 架构概览
 
-### 系统架构图
-
-```mermaid
-graph TB
-    subgraph Client["前端 · Next.js 16 + React 19"]
-        UI_Input["输入页 /"]
-        UI_Result["结果页 /result/:id"]
-        UI_History["历史页 /history"]
-        I18n["i18n 中英文切换"]
-        EventSDK["EventTracker SDK<br/>5事件 · 批量上报 · 离线缓存"]
-        Proxy["API 代理<br/>catch-all route.ts"]
-    end
-
-    subgraph Server["后端 · FastAPI + Python 3.11"]
-        direction TB
-        subgraph APILayer["API 路由层"]
-            A_Assess["POST/GET /assessments"]
-            A_Patient["POST /patients"]
-            A_Event["POST /events"]
-            A_Contact["POST /contact-requests"]
-            A_Feedback["POST /assessments/:id/feedback"]
-        end
-
-        subgraph CoreEngine["核心引擎层"]
-            RuleEngine["规则引擎<br/>CTCAE 决策表<br/>44条规则 · 版本化"]
-            RiskCalc["加权风险评分<br/>max×0.6 + avg×0.4"]
-            Emergency["紧急关键词检测<br/>高热不退 · 大量出血 · 意识模糊"]
-        end
-
-        subgraph AILayer["AI 增强层 · OpenAI 兼容接口"]
-            Extract["症状提取<br/>自由文本 → 结构化症状"]
-            Enhance["结构化解读<br/>主诉 · 重点 · 安心 · 建议"]
-            Fallback["降级策略<br/>AI不可用 → 关键词匹配"]
-        end
-
-        subgraph DataLayer["数据持久层"]
-            ORM["SQLAlchemy 2.0 ORM"]
-            Seed["规则种子 · 启动自动导入"]
-        end
-    end
-
-    subgraph Storage["存储"]
-        SQLite["SQLite<br/>开发环境"]
-        PG["PostgreSQL 16<br/>生产环境"]
-        DeepSeek["DeepSeek API<br/>AI 服务"]
-    end
-
-    UI_Input --> Proxy
-    UI_Result --> Proxy
-    UI_History --> Proxy
-    EventSDK --> Proxy
-    Proxy --> APILayer
-
-    A_Assess --> CoreEngine
-    A_Assess --> AILayer
-    CoreEngine --> RuleEngine
-    CoreEngine --> RiskCalc
-    CoreEngine --> Emergency
-    AILayer --> Extract
-    AILayer --> Enhance
-    AILayer --> Fallback
-
-    APILayer --> DataLayer
-    DataLayer --> SQLite
-    DataLayer --> PG
-    AILayer --> DeepSeek
-```
-
-### 数据流图
-
-```mermaid
-sequenceDiagram
-    participant U as 患者
-    participant FE as 前端 Next.js
-    participant Proxy as API 代理
-    participant BE as 后端 FastAPI
-    participant Rule as 规则引擎
-    participant AI as DeepSeek AI
-    participant DB as 数据库
-
-    Note over U,DB: ① 感知阶段 — 接收患者输入
-
-    U->>FE: 填写用药/病史/症状描述<br/>选择预设症状+严重程度
-    FE->>FE: trackAssessmentStarted()
-    U->>FE: 点击"开始评估"
-    FE->>Proxy: POST /api/v1/assessments
-    Proxy->>BE: 转发请求
-
-    Note over BE,AI: ② 决策阶段 — 规则引擎 + AI 双轨评估
-
-    BE->>AI: extract_symptoms_with_ai(自由文本)
-    AI-->>BE: 提取的症状 [{name, severity}]
-    Note right of BE: AI失败时降级到关键词匹配
-
-    BE->>Rule: evaluate(预设症状 + AI提取症状)
-    Rule->>Rule: CTCAE 决策表匹配
-    Rule->>Rule: 加权风险评分计算
-    Rule->>Rule: 紧急关键词检测
-    Rule-->>BE: risk_level + ctcae_grades + evidences
-
-    BE->>AI: enhance_with_ai(评估结果 + 用药 + 病史)
-    AI-->>BE: 结构化解读报告<br/>主诉概要 / 需要重视 / 无需过虑
-
-    Note over BE,DB: ③ 执行阶段 — 持久化 + 响应
-
-    BE->>DB: INSERT Assessment (不可变)
-    BE->>DB: INSERT Advice × N
-    BE->>DB: INSERT Evidence × N
-    BE->>DB: INSERT AuditLog
-    BE-->>Proxy: AssessmentResponse
-    Proxy-->>FE: 评估结果
-    FE->>FE: trackAssessmentSubmitted()
-    FE->>U: 展示结构化评估报告
-
-    Note over U,DB: ④ 学习阶段 — 反馈收集
-
-    U->>FE: 点击"有帮助/没有帮助"
-    FE->>Proxy: POST /assessments/:id/feedback
-    Proxy->>BE: 转发
-    BE->>DB: INSERT PatientFeedback
-
-    U->>FE: 点击"联系医疗团队"
-    FE->>FE: trackContactTeamClicked()
-    FE->>Proxy: POST /contact-requests
-    Proxy->>BE: 转发
-    BE->>DB: INSERT ContactRequest
-
-    U->>FE: 离开页面
-    FE->>FE: trackAssessmentClosed(duration)
-    FE->>Proxy: POST /events (批量)
-    Proxy->>BE: 转发
-    BE->>DB: INSERT EventLog × N (异步)
-```
-
-### 智能体闭环：感知-决策-执行-学习
-
-```mermaid
-graph LR
-    subgraph Perceive["① 感知"]
-        P1["自由文本输入<br/>患者口语化描述"]
-        P2["结构化输入<br/>预设症状 + 三级严重度"]
-        P3["上下文信息<br/>用药方案 · 既往病史"]
-        P4["AI 症状提取<br/>DeepSeek LLM"]
-        P5["关键词降级<br/>37个中文→英文映射"]
-    end
-
-    subgraph Decide["② 决策"]
-        D1["CTCAE 决策表<br/>44条版本化规则"]
-        D2["风险分级<br/>Grade 1/2/3 匹配"]
-        D3["加权评分<br/>max×0.6 + avg×0.4"]
-        D4["紧急检测<br/>高热·出血·意识模糊"]
-        D5["冲突消解<br/>多规则取最高风险"]
-    end
-
-    subgraph Execute["③ 执行"]
-        E1["AI 结构化解读<br/>主诉·重点·安心·建议"]
-        E2["风险可视化<br/>评分·等级·颜色区分"]
-        E3["不可变快照<br/>Assessment 写入即锁定"]
-        E4["审计日志<br/>规则ID·版本·置信度"]
-        E5["协同触发<br/>高风险→联系医疗团队"]
-    end
-
-    subgraph Learn["④ 学习"]
-        L1["患者反馈<br/>有帮助 / 没有帮助"]
-        L2["行为事件<br/>5个埋点·session串联"]
-        L3["隐式信号<br/>停留时长·是否联系团队"]
-        L4["数据沉淀<br/>EventLog + Feedback"]
-        L5["规则优化<br/>分析→调整→审核→灰度"]
-    end
-
-    P1 --> P4
-    P2 --> D1
-    P3 --> E1
-    P4 -->|成功| D1
-    P4 -->|失败| P5
-    P5 --> D1
-
-    D1 --> D2
-    D2 --> D3
-    D3 --> D4
-    D4 --> D5
-    D5 --> E1
-
-    E1 --> E2
-    E2 --> E3
-    E3 --> E4
-    E4 --> E5
-
-    E2 --> L1
-    E2 --> L2
-    E5 --> L3
-    L1 --> L4
-    L2 --> L4
-    L3 --> L4
-    L4 --> L5
-    L5 -.->|规则迭代| D1
-
-    style Perceive fill:#E3F2FD,stroke:#1565C0
-    style Decide fill:#FFF3E0,stroke:#E65100
-    style Execute fill:#E8F5E9,stroke:#2E7D32
-    style Learn fill:#F3E5F5,stroke:#6A1B9A
-```
 
 核心原则:
 - 规则引擎作为确定性底线，AI 作为增强层（AI不可用时自动降级）
@@ -300,3 +260,5 @@ GentleMend/
 | POST | `/api/v1/contact-requests/` | 联系团队请求 |
 
 完整 API 文档: 启动后访问 http://localhost:8000/docs
+
+GitHub: https://github.com/MaxMiksa/GentleMend.git

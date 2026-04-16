@@ -11,7 +11,7 @@
     "history": "History"
   },
   "input": {
-    "title": "Side Effect Self-Assessment",
+    "title": "Side Effect Self-Assessment — For Breast Cancer Patients",
     "subtitle": "Describe your current symptoms and discomfort. The system will assess your risk level and provide recommendations.",
     "medicationLabel": "Medications & Surgery",
     "medicationPlaceholder": "List current medications (name, dosage, frequency) and any recent surgical procedures...",

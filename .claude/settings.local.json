@@ -10,7 +10,8 @@
       "Bash(where docker.exe)",
       "Bash(cd:*)",
       "Bash(pkill -f \"uvicorn app.main\")",
-      "Bash(taskkill //F //IM python.exe)"
+      "Bash(taskkill //F //IM python.exe)",
+      "Bash(git add:*)"
     ]
   },
   "spinnerTipsEnabled": false
